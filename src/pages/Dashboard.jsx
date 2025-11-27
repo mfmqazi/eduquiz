@@ -105,7 +105,7 @@ export default function Dashboard() {
                     <p className="text-slate-500 text-sm">View your latest quiz attempts and track your progress over time.</p>
                 </div>
                 <div
-                    onClick={() => alert('Study Materials feature coming soon!')}
+                    onClick={() => navigate('/study-materials')}
                     className="glass-panel p-6 hover:bg-white/80 transition-all cursor-pointer group border-2 border-transparent hover:border-pink-200 shadow-sm hover:shadow-md"
                 >
                     <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-pink-600 transition-colors">Study Materials</h3>

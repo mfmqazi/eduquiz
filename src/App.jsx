@@ -8,6 +8,7 @@ import Quiz from './pages/Quiz';
 import History from './pages/History';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import StudyMaterials from './pages/StudyMaterials';
 
 function App() {
   return (
@@ -38,6 +39,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <History />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/study-materials"
+              element={
+                <PrivateRoute>
+                  <StudyMaterials />
                 </PrivateRoute>
               }
             />

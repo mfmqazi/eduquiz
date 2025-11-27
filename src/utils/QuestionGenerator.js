@@ -8,51 +8,64 @@ function shuffleArray(array) {
     return [...array].sort(() => Math.random() - 0.5);
 }
 
-// Fallback generator for when API fails
+// Better fallback generator
 function generateFallbackQuestion(grade, subject, topic) {
-    const gradeNum = parseInt(grade.replace("Grade ", ""));
+    const gradeNum = parseInt(grade.replace("Grade ", "")) || 5;
 
+    // Math Fallback (Real calculation)
     if (subject === "Math") {
-        const range = gradeNum <= 3 ? 20 : gradeNum <= 5 ? 50 : gradeNum <= 7 ? 100 : 500;
-        const n1 = getRandomInt(1, range);
-        const n2 = getRandomInt(1, range);
+        const isAdvanced = gradeNum > 5;
+        const n1 = getRandomInt(2, isAdvanced ? 20 : 10);
+        const n2 = getRandomInt(2, isAdvanced ? 20 : 10);
 
-        const question = `What is ${n1} + ${n2}?`;
-        const answer = String(n1 + n2);
+        let question, answer;
+
+        if (topic.includes("Algebra") || isAdvanced) {
+            // Generate: Solve for x: ax + b = c
+            const x = getRandomInt(1, 10);
+            const a = getRandomInt(2, 5);
+            const b = getRandomInt(1, 20);
+            const c = a * x + b;
+            question = `Solve for $x$: $${a}x + ${b} = ${c}$`;
+            answer = String(x);
+        } else {
+            // Basic Arithmetic
+            question = `Calculate: $${n1} \\times ${n2}$`;
+            answer = String(n1 * n2);
+        }
 
         const options = new Set([answer]);
-        const answerNum = parseInt(answer);
-
         while (options.size < 4) {
-            const offset = getRandomInt(-15, 15);
-            if (offset !== 0) {
-                const wrongAnswer = answerNum + offset;
-                if (wrongAnswer > 0) {
-                    options.add(String(wrongAnswer));
-                }
-            }
+            const val = parseInt(answer) + getRandomInt(-5, 5);
+            if (val !== parseInt(answer) && val > 0) options.add(String(val));
         }
 
         return {
             question,
             answer,
-            options: shuffleArray(Array.from(options)).slice(0, 4)
+            options: shuffleArray(Array.from(options)),
+            explanation: "This is a generated practice question."
         };
     }
 
+    // Generic Fallback for other subjects
     return {
-        question: `Sample question for ${subject} - ${topic}`,
-        answer: "Answer A",
-        options: shuffleArray(["Answer A", "Answer B", "Answer C", "Answer D"])
+        question: `Which of the following is a key concept in ${grade} ${subject} - ${topic}?`,
+        answer: "Critical Thinking",
+        options: shuffleArray(["Critical Thinking", "Rote Memorization", "Random Guessing", "Ignoring Facts"]),
+        explanation: "Critical thinking is essential for understanding this subject."
     };
 }
 
 export async function generateQuestions(grade, subject, topic, count = 5) {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
+    // Debug log to check if key exists (don't log the actual key)
+    console.log("🔑 API Key Status:", apiKey ? "Present" : "Missing");
+
     // If no API key, use fallback
-    if (!apiKey || apiKey === "your_gemini_api_key_here" || apiKey.trim() === "") {
-        console.warn("⚠️ No Gemini API key found. Using fallback questions.");
+    if (!apiKey || apiKey.includes("your_gemini_api_key")) {
+        console.warn("⚠️ No valid Gemini API key. Using fallback.");
         return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
     }
 

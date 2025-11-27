@@ -18,6 +18,7 @@ export default function Quiz() {
     const [questions, setQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState('');
+    const [showFeedback, setShowFeedback] = useState(false); // New: show instant feedback
     const [score, setScore] = useState(0);
     const [showResult, setShowResult] = useState(false);
     const [answers, setAnswers] = useState([]);
@@ -54,7 +55,9 @@ export default function Quiz() {
     }, [grade, subject, topic, navigate]);
 
     function handleAnswerSelect(option) {
+        if (showFeedback) return; // Don't allow changing answer after feedback shown
         setSelectedAnswer(option);
+        setShowFeedback(true); // Show instant feedback
     }
 
     function handleNextQuestion() {
@@ -76,6 +79,7 @@ export default function Quiz() {
         if (nextIndex < questions.length) {
             setCurrentQuestionIndex(nextIndex);
             setSelectedAnswer('');
+            setShowFeedback(false); // Reset feedback for next question
         } else {
             finishQuiz(isCorrect ? score + 1 : score);
         }
@@ -198,23 +202,50 @@ export default function Quiz() {
                 </h3>
 
                 <div className="grid gap-4">
-                    {currentQuestion.options.map((option, index) => (
-                        <button
-                            key={index}
-                            onClick={() => handleAnswerSelect(option)}
-                            className={`p-5 rounded-xl border-2 text-left transition-all flex items-center justify-between group shadow-sm hover:shadow-md
-                ${selectedAnswer === option
-                                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 ring-2 ring-indigo-200'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-indigo-300'
-                                }`}
-                        >
-                            <span className="text-lg font-medium">
-                                <TextWithMath>{option}</TextWithMath>
-                            </span>
-                            {selectedAnswer === option && <CheckCircle size={24} className="text-indigo-600" />}
-                        </button>
-                    ))}
+                    {currentQuestion.options.map((option, index) => {
+                        const isCorrect = option === currentQuestion.answer;
+                        const isSelected = selectedAnswer === option;
+                        const showAsCorrect = showFeedback && isCorrect;
+                        const showAsWrong = showFeedback && isSelected && !isCorrect;
+
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => handleAnswerSelect(option)}
+                                disabled={showFeedback}
+                                className={`p-5 rounded-xl border-2 text-left transition-all flex items-center justify-between group shadow-sm hover:shadow-md disabled:cursor-not-allowed
+                                    ${showAsCorrect
+                                        ? 'bg-green-50 border-green-500 text-green-900 ring-2 ring-green-200'
+                                        : showAsWrong
+                                            ? 'bg-red-50 border-red-500 text-red-900 ring-2 ring-red-200'
+                                            : isSelected
+                                                ? 'bg-indigo-50 border-indigo-500 text-indigo-900 ring-2 ring-indigo-200'
+                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-indigo-300'
+                                    }`}
+                            >
+                                <span className="text-lg font-medium">
+                                    <TextWithMath>{option}</TextWithMath>
+                                </span>
+                                {showAsCorrect && <CheckCircle size={24} className="text-green-600" />}
+                                {showAsWrong && <XCircle size={24} className="text-red-600" />}
+                            </button>
+                        );
+                    })}
                 </div>
+
+                {showFeedback && currentQuestion.explanation && (
+                    <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg animate-fade-in">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <p className="font-semibold text-blue-900 mb-1">Explanation:</p>
+                                <p className="text-blue-800 text-sm leading-relaxed">
+                                    <TextWithMath>{currentQuestion.explanation}</TextWithMath>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-8 flex justify-end">
                     <button
