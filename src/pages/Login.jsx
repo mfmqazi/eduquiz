@@ -26,36 +26,68 @@ export default function Login() {
     }
 
     return (
-        <div className="max-w-md mx-auto mt-20">
-            <div className="glass-panel animate-fade-in">
-                <h2 className="text-3xl font-bold text-center mb-6 text-white">Welcome Back</h2>
+        <div className="max-w-md mx-auto mt-20 px-4">
+            <div className="glass-panel p-8 animate-fade-in border-t-4 border-indigo-500 shadow-2xl shadow-indigo-500/10">
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+                        <LogIn size={24} />
+                    </div>
+                    <h2 className="text-3xl font-bold text-slate-800">Welcome Back</h2>
+                    <p className="text-slate-500 mt-2">Please sign in to continue</p>
+                </div>
 
-                {error && <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded mb-4 text-sm">{error}</div>}
+                {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r mb-6 text-sm flex items-center">
+                        <span>{error}</span>
+                    </div>
+                )}
 
-                <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <label>Email</label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-3 text-slate-400" size={18} />
-                            <input type="email" ref={emailRef} required className="pl-10" placeholder="john@example.com" />
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                        <div className="relative group">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                            <input
+                                type="email"
+                                ref={emailRef}
+                                required
+                                className="input-field pl-10"
+                                placeholder="john@example.com"
+                            />
                         </div>
                     </div>
 
-                    <div className="input-group">
-                        <label>Password</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 text-slate-400" size={18} />
-                            <input type="password" ref={passwordRef} required className="pl-10" placeholder="••••••••" />
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
+                        <div className="relative group">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                            <input
+                                type="password"
+                                ref={passwordRef}
+                                required
+                                className="input-field pl-10"
+                                placeholder="••••••••"
+                            />
                         </div>
                     </div>
 
-                    <button disabled={loading} className="btn btn-primary w-full mt-4" type="submit">
-                        {loading ? <Loader2 className="animate-spin" /> : <><LogIn size={20} /> Log In</>}
+                    <button
+                        disabled={loading}
+                        className="btn btn-primary w-full py-3 text-lg shadow-lg shadow-indigo-500/30 mt-2"
+                        type="submit"
+                    >
+                        {loading ? (
+                            <Loader2 className="animate-spin" />
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <LogIn size={20} /> Log In
+                            </span>
+                        )}
                     </button>
                 </form>
 
-                <div className="w-full text-center mt-6 text-slate-400 text-sm">
-                    Need an account? <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium">Sign Up</Link>
+                <div className="w-full text-center mt-8 pt-6 border-t border-slate-100 text-slate-500 text-sm">
+                    Don't have an account? <Link to="/signup" className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline">Sign Up</Link>
                 </div>
             </div>
         </div>

@@ -121,7 +121,19 @@ export function TextWithMath({ children }) {
                 } else if (part.type === 'display-math') {
                     return <MathText key={index} inline={false}>{part.content}</MathText>;
                 } else {
-                    return <span key={index}>{part.content}</span>;
+                    // Handle newlines in text
+                    // We split by literal \n or actual newline characters
+                    const textParts = part.content.split(/\\n|\n/);
+                    return (
+                        <span key={index}>
+                            {textParts.map((line, i) => (
+                                <React.Fragment key={i}>
+                                    {line}
+                                    {i < textParts.length - 1 && <br />}
+                                </React.Fragment>
+                            ))}
+                        </span>
+                    );
                 }
             })}
         </>
