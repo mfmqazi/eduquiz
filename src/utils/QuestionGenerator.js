@@ -73,8 +73,12 @@ export async function generateQuestions(grade, subject, topic, count = 5) {
         console.log(`🤖 Generating ${count} AI questions for ${grade} ${subject} - ${topic}...`);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Use the stable 1.5-flash model which is reliable and free
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Try the specific version which is often more stable
+        let model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
+
+        // Note: If this fails, we could try 'gemini-pro' but let's stick to the requested one first.
+        // The error 404 usually means the alias isn't found, so -001 should fix it.
 
         const prompt = `You are an expert educator and test designer creating high-quality exam preparation questions for US students.
 
