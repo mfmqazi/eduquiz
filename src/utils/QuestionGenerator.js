@@ -195,15 +195,16 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 
             // 6. Fix specific common issues where backslash might be missing
             // We aggressively restore backslashes for common LaTeX commands if they appear without one.
-            // We use [^\\\\] to ensure we don't double-escape if it's already correct (e.g. \\frac).
-            // We match the command preceded by a non-backslash character (or start of line).
+            // But we must be careful NOT to break words (e.g. "sometimes" -> "some\times").
+            // We only replace if the command is preceded by a non-word character or start of string.
 
             const commonCommands = ['frac', 'neq', 'times', 'sqrt', 'cdot', 'div', 'pm', 'approx', 'leq', 'geq', 'infty'];
 
             commonCommands.forEach(cmd => {
                 // Replace " cmd" with " \cmd"
-                // We use a regex that captures the preceding char
-                const regex = new RegExp(`([^\\\\])${cmd}`, 'g');
+                // We use a regex that captures the preceding char which must be non-alphanumeric (or space)
+                // [^a-zA-Z0-9] matches symbols, spaces, braces, etc.
+                const regex = new RegExp(`([^a-zA-Z0-9\\\\])${cmd}`, 'g');
                 s = s.replace(regex, `$1\\\\${cmd}`);
 
                 // Handle case where it's at the very start of the string
@@ -215,6 +216,14 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
             // 7. Fix malformed fractions like \frac12 (missing braces) -> \frac{1}{2}
             // This is a heuristic: \frac followed by 2 digits
             s = s.replace(/\\\\frac\s?(\d)(\d)/g, '\\\\frac{$1}{$2}');
+
+            // 8. Fix JSON Syntax Errors (Trailing Commas, Unquoted Keys)
+            // Remove trailing commas in arrays/objects
+            s = s.replace(/,(\s*[\]}])/g, '$1');
+
+            // Quote unquoted keys (e.g. { question: ... } -> { "question": ... })
+            // Matches { key: or , key: 
+            s = s.replace(/([{,]\s*)([a-zA-Z0-9_]+?)\s*:/g, '$1"$2":');
 
             return s;
         };
