@@ -253,7 +253,7 @@ export default function Quiz() {
                     <button
                         onClick={handleNextQuestion}
                         disabled={!selectedAnswer}
-                        className="btn btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30"
+                        className="btn btn-primary px-10 py-4 text-xl font-bold shadow-xl shadow-indigo-500/40 hover:shadow-indigo-500/60 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
                     >
                         {currentQuestionIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
                     </button>
