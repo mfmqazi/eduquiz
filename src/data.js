@@ -22,12 +22,48 @@ const SUBJECTS_BY_GRADE = {
         "English": ["American Literature", "British Literature", "World Literature", "Rhetoric & Composition", "Creative Writing"],
         "Social Studies": ["World History", "US History", "US Government & Civics", "Economics", "Psychology", "Sociology"]
     },
-    // Advanced Placement (AP)
+    // Advanced Placement (AP) - Official Categories
     ap: {
-        "AP Math": ["AP Calculus AB", "AP Calculus BC", "AP Statistics", "AP Computer Science A"],
-        "AP Science": ["AP Biology", "AP Chemistry", "AP Physics 1", "AP Physics C", "AP Environmental Science"],
-        "AP English": ["AP English Language", "AP English Literature"],
-        "AP Social Studies": ["AP US History", "AP World History", "AP European History", "AP Government", "AP Macroeconomics", "AP Psychology"]
+        "AP Arts": ["AP Art History", "AP Music Theory", "AP 2-D Art and Design"],
+        "AP English": ["AP English Language and Composition", "AP English Literature and Composition"],
+        "AP History & Social Sciences": [
+            "AP Comparative Government and Politics",
+            "AP European History",
+            "AP Human Geography",
+            "AP Macroeconomics",
+            "AP Microeconomics",
+            "AP Psychology",
+            "AP United States Government and Politics",
+            "AP United States History",
+            "AP World History: Modern"
+        ],
+        "AP Math & Computer Science": [
+            "AP Calculus AB",
+            "AP Calculus BC",
+            "AP Computer Science A",
+            "AP Computer Science Principles",
+            "AP Precalculus",
+            "AP Statistics"
+        ],
+        "AP Sciences": [
+            "AP Biology",
+            "AP Chemistry",
+            "AP Environmental Science",
+            "AP Physics 1: Algebra-Based",
+            "AP Physics 2: Algebra-Based",
+            "AP Physics C: Mechanics",
+            "AP Physics C: Electricity and Magnetism"
+        ],
+        "AP World Languages & Cultures": [
+            "AP Chinese Language and Culture",
+            "AP French Language and Culture",
+            "AP German Language and Culture",
+            "AP Italian Language and Culture",
+            "AP Japanese Language and Culture",
+            "AP Latin",
+            "AP Spanish Language and Culture",
+            "AP Spanish Literature and Culture"
+        ]
     }
 };
 
