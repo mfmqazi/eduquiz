@@ -172,14 +172,11 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 
             // 3. Protect valid escapes
             // We replace them with unique placeholders
+            // IMPORTANT: We do NOT protect \n, \t, \f, \r, \b because they collide with LaTeX 
+            // (e.g., \neq, \text, \frac) and we prefer preserving the LaTeX command over the control character.
             const placeholders = {
                 '\\\\': '___DOUBLE_BACKSLASH___',
                 '\\"': '___ESCAPED_QUOTE___',
-                '\\n': '___NEWLINE___',
-                '\\r': '___RETURN___',
-                '\\t': '___TAB___',
-                '\\b': '___BACKSPACE___',
-                '\\f': '___FORMFEED___',
                 '\\/': '___FORWARD_SLASH___'
             };
 
@@ -187,13 +184,19 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
                 s = s.split(key).join(val);
             }
 
-            // 4. Escape any remaining backslashes (these are the bad ones like \frac)
+            // 4. Escape any remaining backslashes (these are the bad ones like \frac, \neq, \text)
             s = s.replace(/\\/g, '\\\\');
 
             // 5. Restore placeholders
             for (const [key, val] of Object.entries(placeholders)) {
                 s = s.split(val).join(key);
             }
+
+            // 6. Fix specific common issues where backslash might be missing
+            // If we see "frac{" without a backslash, add it.
+            s = s.replace(/([^\\])frac\{/g, '$1\\\\frac{');
+            // Handle start of string case
+            if (s.startsWith('frac{')) s = '\\\\frac{' + s.substring(5);
 
             return s;
         };
