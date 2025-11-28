@@ -153,53 +153,57 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 
         let text = data.candidates[0].content.parts[0].text;
 
-        // Robust JSON cleaning
-        text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        // --- ROBUST JSON CLEANING ---
+        // Strategy: Protect valid JSON escapes, then escape everything else.
 
-        // Find the first '[' and last ']' to ensure we only parse the array
-        const firstBracket = text.indexOf('[');
-        const lastBracket = text.lastIndexOf(']');
-        if (firstBracket !== -1 && lastBracket !== -1) {
-            text = text.substring(firstBracket, lastBracket + 1);
-        }
+        const cleanJSON = (str) => {
+            // 1. Remove markdown
+            let s = str.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-        // --- AGGRESSIVE JSON REPAIR ---
-        // The issue is that the AI returns strings like "\frac" which is invalid JSON.
-        // Valid JSON requires "\\frac".
-        // We need to escape any backslash that is NOT followed by a valid JSON control char.
+            // 2. Extract array
+            const first = s.indexOf('[');
+            const last = s.lastIndexOf(']');
+            if (first !== -1 && last !== -1) {
+                s = s.substring(first, last + 1);
+            }
 
-        // 1. Replace double backslashes with a placeholder to protect them
-        let safeText = text.replace(/\\\\/g, '___DOUBLE_BACKSLASH___');
+            // 3. Protect valid escapes
+            // We replace them with unique placeholders
+            const placeholders = {
+                '\\\\': '___DOUBLE_BACKSLASH___',
+                '\\"': '___ESCAPED_QUOTE___',
+                '\\n': '___NEWLINE___',
+                '\\r': '___RETURN___',
+                '\\t': '___TAB___',
+                '\\b': '___BACKSPACE___',
+                '\\f': '___FORMFEED___',
+                '\\/': '___FORWARD_SLASH___'
+            };
 
-        // 2. Escape single backslashes that are causing the error
-        // Matches \ followed by anything that is NOT " / b f n r t u
-        safeText = safeText.replace(/\\([^"\\/bfnrtu])/g, '\\\\$1');
+            for (const [key, val] of Object.entries(placeholders)) {
+                s = s.split(key).join(val);
+            }
 
-        // 3. Restore the double backslashes (which are now safe)
-        safeText = safeText.replace(/___DOUBLE_BACKSLASH___/g, '\\\\');
+            // 4. Escape any remaining backslashes (these are the bad ones like \frac)
+            s = s.replace(/\\/g, '\\\\');
+
+            // 5. Restore placeholders
+            for (const [key, val] of Object.entries(placeholders)) {
+                s = s.split(val).join(key);
+            }
+
+            return s;
+        };
+
+        const cleanedText = cleanJSON(text);
 
         let questions;
         try {
-            questions = JSON.parse(safeText);
+            questions = JSON.parse(cleanedText);
         } catch (parseError) {
-            console.error("First JSON Parse Error. Retrying with raw text escape...", parseError);
-            console.log("Failed text:", safeText);
-
-            try {
-                // Last resort: Escape ALL backslashes in the original text
-                // This might result in double escaping (\\\\frac) which is actually what we want for JSON
-                // But we must be careful not to break valid escapes like \n or \"
-                // So let's try a simpler approach: just remove single backslashes if they aren't escapes? 
-                // No, that breaks math.
-
-                // Let's try to parse the original text but replacing ALL \ with \\ 
-                // EXCEPT for \"
-                const superSafe = text.replace(/\\/g, '\\\\').replace(/\\\\"/g, '\\"');
-                questions = JSON.parse(superSafe);
-            } catch (retryError) {
-                console.error("Final JSON Parse Error:", retryError);
-                throw parseError;
-            }
+            console.error("JSON Parse Error. Raw text:", text);
+            console.error("Cleaned text:", cleanedText);
+            throw parseError;
         }
 
         // Validate structure
