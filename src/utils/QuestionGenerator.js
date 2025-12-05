@@ -69,8 +69,40 @@ export async function generateQuestions(grade, subject, topic, count = 5) {
         return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
     }
 
+    // Parallel Fetching Strategy
+    // We fetch questions in small batches (size 1) in parallel to maximize speed.
+    // Gemini Flash is very fast, but generating 5 questions serially takes time.
+    // Parallel requests reduce the total wait time to roughly the time of generating 1 question.
+
+    const BATCH_SIZE = 1;
+    const promises = [];
+
+    console.log(`🚀 Starting parallel generation for ${count} questions...`);
+
+    for (let i = 0; i < count; i += BATCH_SIZE) {
+        const size = Math.min(BATCH_SIZE, count - i);
+        promises.push(fetchBatch(apiKey, grade, subject, topic, size));
+    }
+
     try {
-        console.log(`🤖 Generating ${count} AI questions for ${grade} ${subject} - ${topic}...`);
+        const results = await Promise.all(promises);
+        // Flatten the array of arrays
+        const allQuestions = results.flat();
+
+        console.log(`✅ Successfully generated ${allQuestions.length} questions in parallel!`);
+        return allQuestions;
+
+    } catch (error) {
+        console.error("❌ Error in parallel generation:", error);
+        console.log("⚠️ Falling back to basic questions");
+        return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
+    }
+}
+
+async function fetchBatch(apiKey, grade, subject, topic, count) {
+    try {
+        // Add a random seed to ensure diversity across parallel requests
+        const seed = Math.random().toString(36).substring(7);
 
         const prompt = `You are an expert educator and test designer creating high-quality exam preparation questions for US students.
 
@@ -78,6 +110,7 @@ Generate ${count} challenging, exam-style multiple-choice questions for:
 - Grade Level: ${grade}
 - Subject: ${subject}
 - Topic: ${topic}
+- Variation ID: ${seed} (Ensure questions are unique)
 
 CRITICAL REQUIREMENTS:
 1. Questions MUST align with ${grade} US curriculum standards (Common Core, NGSS, etc.)
@@ -128,8 +161,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
   }
 ]`;
 
-        // Direct API call using fetch (more reliable than SDK in some environments)
-        // Using gemini-2.0-flash as requested (matching Seerah App implementation)
+        // Direct API call using fetch
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
@@ -158,8 +190,6 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
         let text = data.candidates[0].content.parts[0].text;
 
         // --- ROBUST JSON CLEANING ---
-        // Strategy: Protect valid JSON escapes, then escape everything else.
-
         const cleanJSON = (str) => {
             // 1. Remove markdown
             let s = str.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -172,9 +202,6 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
             }
 
             // 3. Protect valid escapes
-            // We replace them with unique placeholders
-            // IMPORTANT: We do NOT protect \n, \t, \f, \r, \b because they collide with LaTeX 
-            // (e.g., \neq, \text, \frac) and we prefer preserving the LaTeX command over the control character.
             const placeholders = {
                 '\\\\': '___DOUBLE_BACKSLASH___',
                 '\\"': '___ESCAPED_QUOTE___',
@@ -185,7 +212,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
                 s = s.split(key).join(val);
             }
 
-            // 4. Escape any remaining backslashes (these are the bad ones like \frac, \neq, \text)
+            // 4. Escape any remaining backslashes
             s = s.replace(/\\/g, '\\\\');
 
             // 5. Restore placeholders
@@ -193,39 +220,24 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
                 s = s.split(val).join(key);
             }
 
-            // 6. Fix specific common issues where backslash might be missing
-            // We aggressively restore backslashes for common LaTeX commands if they appear without one.
-            // But we must be careful NOT to break words (e.g. "sometimes" -> "some\times").
-            // We only replace if the command is preceded by a non-word character or start of string.
-            // AND we use a negative lookahead to ensure it's not the start of a longer word (e.g. "fraction")
-
-            // Removed 'div', 'times', 'pm' because they match common words (divided, sometimes, pm) and are too risky.
+            // 6. Fix specific common issues
             const commonCommands = ['frac', 'neq', 'sqrt', 'cdot', 'approx', 'leq', 'geq', 'infty'];
 
             commonCommands.forEach(cmd => {
-                // Replace " cmd" with " \cmd"
-                // 1. Preceded by non-alphanumeric (or space)
-                // 2. Followed by non-letter (to avoid matching "fraction" for "frac")
                 const regex = new RegExp(`([^a-zA-Z0-9\\\\])${cmd}(?![a-zA-Z])`, 'g');
                 s = s.replace(regex, `$1\\\\${cmd}`);
 
-                // Handle case where it's at the very start of the string
                 const startRegex = new RegExp(`^${cmd}(?![a-zA-Z])`);
                 if (startRegex.test(s)) {
                     s = '\\\\' + s;
                 }
             });
 
-            // 7. Fix malformed fractions like \frac12 (missing braces) -> \frac{1}{2}
-            // This is a heuristic: \frac followed by 2 digits
+            // 7. Fix malformed fractions
             s = s.replace(/\\\\frac\s?(\d)(\d)/g, '\\\\frac{$1}{$2}');
 
-            // 8. Fix JSON Syntax Errors (Trailing Commas, Unquoted Keys)
-            // Remove trailing commas in arrays/objects
+            // 8. Fix JSON Syntax Errors
             s = s.replace(/,(\s*[\]}])/g, '$1');
-
-            // Quote unquoted keys (e.g. { question: ... } -> { "question": ... })
-            // Matches { key: or , key: 
             s = s.replace(/([{,]\s*)([a-zA-Z0-9_]+?)\s*:/g, '$1"$2":');
 
             return s;
@@ -260,17 +272,10 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
             throw new Error("No valid questions generated");
         }
 
-        console.log(`✅ Successfully generated ${validQuestions.length} AI questions!`);
         return validQuestions.slice(0, count);
 
     } catch (error) {
-        console.error("❌ Error generating AI questions:");
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Full error:", error);
-        console.log("⚠️ Falling back to basic questions");
-
-        // Fallback
-        return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
+        console.error("Error in fetchBatch:", error);
+        throw error; // Re-throw to be caught by Promise.all or handled above
     }
 }

@@ -22,6 +22,17 @@ export default function Signup() {
             return setError('Passwords do not match');
         }
 
+        const password = passwordRef.current.value;
+        const strongPasswordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+
+        // Alternative regex that is a bit more permissive with special chars but strict on types
+        // At least 8 chars, 1 letter, 1 number, 1 special character
+        const simpleStrongRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+        if (!simpleStrongRegex.test(password)) {
+            return setError('Password must be at least 8 characters long and contain letters, numbers, and special characters.');
+        }
+
         try {
             setError('');
             setLoading(true);
@@ -97,6 +108,9 @@ export default function Signup() {
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                             <input type="password" ref={passwordRef} required className="input-field pl-10" placeholder="••••••••" />
                         </div>
+                        <p className="text-xs text-slate-500 mt-1 ml-1">
+                            Must be at least 8 chars with letters, numbers & symbols
+                        </p>
                     </div>
 
                     <div>
