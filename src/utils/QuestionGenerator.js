@@ -57,6 +57,13 @@ function generateFallbackQuestion(grade, subject, topic) {
     };
 }
 
+const MODELS = [
+    "gemini-3.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash"
+];
+
 export async function generateQuestions(grade, subject, topic, count = 5) {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -66,40 +73,81 @@ export async function generateQuestions(grade, subject, topic, count = 5) {
     // If no API key, use fallback
     if (!apiKey || apiKey.includes("your_gemini_api_key")) {
         console.warn("⚠️ No valid Gemini API key. Using fallback.");
-        return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
+        return {
+            questions: Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic)),
+            usedModel: "Offline Fallback",
+            isFallback: true
+        };
     }
 
     // Parallel Fetching Strategy
-    // We fetch questions in small batches (size 1) in parallel to maximize speed.
-    // Gemini Flash is very fast, but generating 5 questions serially takes time.
-    // Parallel requests reduce the total wait time to roughly the time of generating 1 question.
-
     const BATCH_SIZE = 1;
     const promises = [];
 
     console.log(`🚀 Starting parallel generation for ${count} questions...`);
 
+    // Shared state to track which model is working best (optimization)
+    // We start with the first model, but if a batch finds a working model, we could stick to it?
+    // For now, let each batch try strictly from top to bottom.
+
     for (let i = 0; i < count; i += BATCH_SIZE) {
         const size = Math.min(BATCH_SIZE, count - i);
-        promises.push(fetchBatch(apiKey, grade, subject, topic, size));
+        promises.push(fetchBatchWithRetry(apiKey, grade, subject, topic, size));
     }
 
     try {
         const results = await Promise.all(promises);
-        // Flatten the array of arrays
-        const allQuestions = results.flat();
 
-        console.log(`✅ Successfully generated ${allQuestions.length} questions in parallel!`);
-        return allQuestions;
+        // Flatten the array of arrays
+        const allQuestions = results.flatMap(r => r.questions);
+
+        // Determine the used model (taking the one from the first batch as representative)
+        // In a real scenario, they should all converge to the same working model effectively.
+        const usedModel = results[0]?.usedModel || "Unknown";
+
+        console.log(`✅ Successfully generated ${allQuestions.length} questions using ${usedModel}`);
+
+        return {
+            questions: allQuestions,
+            usedModel: usedModel,
+            isFallback: false
+        };
 
     } catch (error) {
-        console.error("❌ Error in parallel generation:", error);
+        console.error("❌ All models failed:", error);
         console.log("⚠️ Falling back to basic questions");
-        return Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic));
+
+        return {
+            questions: Array.from({ length: count }, () => generateFallbackQuestion(grade, subject, topic)),
+            usedModel: "Offline Fallback (All APIs Failed)",
+            isFallback: true,
+            error: error.message
+        };
     }
 }
 
-async function fetchBatch(apiKey, grade, subject, topic, count) {
+async function fetchBatchWithRetry(apiKey, grade, subject, topic, count) {
+    let lastError = null;
+
+    for (const model of MODELS) {
+        try {
+            // console.log(`Attempting with ${model}...`);
+            const questions = await fetchBatch(apiKey, model, grade, subject, topic, count);
+            return {
+                questions,
+                usedModel: model
+            };
+        } catch (err) {
+            console.warn(`Model ${model} failed:`, err.message);
+            lastError = err;
+            // Continue to next model
+        }
+    }
+
+    throw lastError || new Error("All models failed");
+}
+
+async function fetchBatch(apiKey, model, grade, subject, topic, count) {
     try {
         // Add a random seed to ensure diversity across parallel requests
         const seed = Math.random().toString(36).substring(7);
@@ -162,7 +210,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 ]`;
 
         // Direct API call using fetch
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -275,7 +323,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
         return validQuestions.slice(0, count);
 
     } catch (error) {
-        console.error("Error in fetchBatch:", error);
-        throw error; // Re-throw to be caught by Promise.all or handled above
+        // console.error("Error in fetchBatch:", error);
+        throw error; // Re-throw to be caught by fetchBatchWithRetry
     }
 }

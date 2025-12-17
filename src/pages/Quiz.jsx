@@ -26,6 +26,8 @@ export default function Quiz() {
     const [answers, setAnswers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [usedModel, setUsedModel] = useState('');
+    const [isFallback, setIsFallback] = useState(false);
 
     useEffect(() => {
         async function loadQuestions() {
@@ -34,9 +36,12 @@ export default function Quiz() {
                     setLoading(true);
                     setError('');
                     // Use the generator instead of static data
-                    const generatedQuestions = await generateQuestions(grade, subject, topic, questionCount);
-                    if (generatedQuestions && generatedQuestions.length > 0) {
-                        setQuestions(generatedQuestions);
+                    const result = await generateQuestions(grade, subject, topic, questionCount);
+
+                    if (result.questions && result.questions.length > 0) {
+                        setQuestions(result.questions);
+                        setUsedModel(result.usedModel);
+                        setIsFallback(result.isFallback);
                     } else {
                         setError("Sorry, no questions available for this topic yet.");
                         setTimeout(() => navigate('/'), 2000);
@@ -216,11 +221,30 @@ export default function Quiz() {
             <div className="flex justify-between items-end mb-6">
                 <div>
                     <h2 className="text-sm font-bold text-indigo-600 mb-1 tracking-wide uppercase">{subject} &gt; {topic}</h2>
-                    <h1 className="text-3xl font-extrabold text-slate-800">Question {currentQuestionIndex + 1} <span className="text-slate-400 text-xl font-medium">/ {questions.length}</span></h1>
+                    <h1 className="text-3xl font-extrabold text-slate-800">
+                        Question {currentQuestionIndex + 1} <span className="text-slate-400 text-xl font-medium">/ {questions.length}</span>
+                    </h1>
                 </div>
-                <div className="text-slate-500 text-sm font-bold bg-white/50 px-3 py-1 rounded-full border border-slate-200">
-                    {grade}
+                <div className="flex flex-col items-end gap-2">
+                    <div className="text-slate-500 text-sm font-bold bg-white/50 px-3 py-1 rounded-full border border-slate-200">
+                        {grade}
+                    </div>
                 </div>
+            </div>
+
+            {/* Model Info & Fallback Warning */}
+            <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-slate-400 font-medium px-2">
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    Powered by {usedModel || 'AI'}
+                </div>
+
+                {isFallback && (
+                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 animate-fade-in">
+                        <AlertCircle size={14} />
+                        <span>AI generation failed. Showing offline practice questions.</span>
+                    </div>
+                )}
             </div>
 
             <div className="w-full bg-slate-200 h-3 rounded-full mb-8 overflow-hidden shadow-inner">
