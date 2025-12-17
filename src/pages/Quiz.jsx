@@ -234,8 +234,8 @@ export default function Quiz() {
 
             {/* Model Info & Fallback Warning */}
             <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 text-slate-400 font-medium px-2">
-                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                <div className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm border border-indigo-200">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                     Powered by {usedModel || 'AI'}
                 </div>
 
