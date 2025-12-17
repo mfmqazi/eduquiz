@@ -58,6 +58,7 @@ function generateFallbackQuestion(grade, subject, topic) {
 }
 
 const MODELS = [
+    "gemini-3-flash-preview",
     "gemini-3.0-flash",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
